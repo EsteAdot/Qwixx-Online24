@@ -25,7 +25,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:4px 12px 20
 </style>
 </head>
 <body>
-<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Diagnostic de connexion V3</strong></p></header>
+<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Diagnostic de connexion V4</strong></p></header>
 <main>
 <section class="card" id="setup">
 <h2>Rejoindre ou créer une partie</h2>
@@ -103,23 +103,18 @@ async function joinRoom(){
     if(members[uid]){enterRoom(code);return;}
     if(Object.keys(members).length>=5)return say("Cette salle contient déjà 5 joueurs.",true);
     say("Salle trouvée. Ajout du joueur…");
-    const result=await ref.transaction(data=>{
-      if(data===null)return;
-      data.members=data.members||{};
-      data.players=data.players||{};
-      if(data.members[uid])return data;
-      if(Object.keys(data.members).length>=5)return;
-      data.members[uid]=true;
-      data.players[uid]=newPlayer(name);
-      return data;
-    }, undefined, false);
-    if(!result.committed){
-      const latest=result.snapshot ? result.snapshot.val() : null;
-      if(!latest)return say("La salle a disparu pendant la tentative. Crée une nouvelle salle et réessaie.",true);
-      const count=Object.keys(latest.members||{}).length;
-      if(count>=5)return say("Cette salle contient déjà 5 joueurs.",true);
-      return say("Firebase n'a pas validé l'ajout du joueur. Recharge la page puis réessaie. (Transaction non validée, "+count+" joueur(s) dans la salle.)",true);
-    }
+    // Use one atomic multi-location update after verifying the room exists.
+    // Avoid aborting a transaction when its initial local value is null.
+    const latest=await ref.once("value");
+    if(!latest.exists())return say("La salle n’existe plus. Crée une nouvelle salle et réessaie.",true);
+    const latestData=latest.val()||{};
+    const latestMembers=latestData.members||{};
+    if(latestMembers[uid]){enterRoom(code);return;}
+    if(Object.keys(latestMembers).length>=5)return say("Cette salle contient déjà 5 joueurs.",true);
+    const updates={};
+    updates["members/"+uid]=true;
+    updates["players/"+uid]=newPlayer(name);
+    await ref.update(updates);
     enterRoom(code);
   }catch(e){
     console.error("Erreur lors de la connexion à la salle:",e);
