@@ -95,15 +95,16 @@ async function joinRoom(){
   if(!/^[A-HJ-NP-Z2-9]{5}$/.test(code))return say("Entre un code de 5 caractères (sans I ni O).",true);
   const ref=db.ref("rooms/"+code);
   try{
-    // Vérifie d'abord que le code existe et que la salle est lisible.
-    const before=await ref.get();
-    if(!before.exists())return say("Salle introuvable : vérifie le code affiché sur le premier téléphone.",true);
+    say("Recherche de la salle…");
+    const before=await ref.once("value");
+    if(!before.exists())return say("Salle introuvable. Vérifie le code affiché sur le premier téléphone.",true);
     const current=before.val()||{};
     const members=current.members||{};
     if(members[uid]){enterRoom(code);return;}
     if(Object.keys(members).length>=5)return say("Cette salle contient déjà 5 joueurs.",true);
+    say("Salle trouvée. Ajout du joueur…");
     const result=await ref.transaction(data=>{
-      if(!data)return;
+      if(data===null)return;
       data.members=data.members||{};
       data.players=data.players||{};
       if(data.members[uid])return data;
@@ -111,16 +112,19 @@ async function joinRoom(){
       data.members[uid]=true;
       data.players[uid]=newPlayer(name);
       return data;
-    });
+    }, undefined, false);
     if(!result.committed){
-      const latest=result.snapshot && result.snapshot.val();
-      const count=Object.keys((latest&&latest.members)||{}).length;
-      return say(latest ? `Impossible de rejoindre : la salle contient maintenant ${count} joueur(s). Recharge la page et réessaie.` : "La salle a disparu ou l'accès a été refusé. Vérifie les règles Firebase.",true);
+      const latest=result.snapshot ? result.snapshot.val() : null;
+      if(!latest)return say("La salle a disparu pendant la tentative. Crée une nouvelle salle et réessaie.",true);
+      const count=Object.keys(latest.members||{}).length;
+      if(count>=5)return say("Cette salle contient déjà 5 joueurs.",true);
+      return say("Firebase n'a pas validé l'ajout du joueur. Recharge la page puis réessaie. (Transaction non validée, "+count+" joueur(s) dans la salle.)",true);
     }
     enterRoom(code);
   }catch(e){
-    console.error("Erreur joinRoom:",e);
-    say("Erreur Firebase : "+(e.code||e.message||"connexion refusée")+". Vérifie l'accès Realtime Database.",true);
+    console.error("Erreur lors de la connexion à la salle:",e);
+    const codeErr=e && e.code ? " Code : "+e.code+"." : "";
+    say("Erreur Firebase pendant la connexion : "+(e && e.message ? e.message : "erreur inconnue")+codeErr,true);
   }
 }
 function enterRoom(code){
