@@ -25,7 +25,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:4px 12px 20
 </style>
 </head>
 <body>
-<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Règles Qwixx V9.1</strong></p></header>
+<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Règles Qwixx V10</strong></p></header>
 <main>
 <section class="card" id="setup">
 <h2>Rejoindre ou créer une partie</h2>
@@ -180,10 +180,14 @@ window.mark=async function(c,num,colorOK){
   const white=room.roll.dice[0]+room.roll.dice[1];
   const colA=room.roll.dice[0]+room.roll.dice[colors.indexOf(c)+2];
   const colB=room.roll.dice[1]+room.roll.dice[colors.indexOf(c)+2];
-  const useColor=(isActive && (num===colA || num===colB) && num!==white);
   const useWhite=(num===white);
-  if(!useColor&&!useWhite){say("Cette case ne correspond pas à la somme blanche ni à la somme de couleur autorisée.",true);return;}
-  if(useColor&&p.colorTurn===room.turnNumber){say("Tu as déjà coché une somme de couleur pendant ce tour.",true);return;}
+  const useColor=(isActive && (num===colA || num===colB) && num!==white);
+  if(!useColor&&!useWhite){
+    if(!isActive)say("Les autres joueurs ne peuvent cocher que la somme des deux dés blancs.",true);
+    else say("Cette case ne correspond pas à la somme blanche ni à une somme blanc + couleur autorisée.",true);
+    return;
+  }
+  if(useColor&&p.colorTurn===room.turnNumber){say("Tu as déjà coché une somme blanc + couleur pendant ce tour.",true);return;}
   if(useWhite&&p.whiteTurn===room.turnNumber){say("Tu as déjà coché la somme blanche pendant ce tour.",true);return;}
   try{
     const result=await roomRef.transaction(data=>{
@@ -192,12 +196,14 @@ window.mark=async function(c,num,colorOK){
       const nrow=rowNums[c], arr=Array.isArray(pl.rows&&pl.rows[c])?pl.rows[c]:[], last=arr.length?arr[arr.length-1]:null;
       const idx=nrow.indexOf(num), lastIdx=last===null?-1:nrow.indexOf(last);
       if(pl.locked&&pl.locked[c])return;
-      if(arr.includes(num)||idx<=lastIdx||(num===12&&arr.length<5))return;
+      if(arr.includes(num)||idx<=lastIdx||(num===lockNum[c]&&arr.length<5))return;
       const w=data.roll.dice[0]+data.roll.dice[1];
-      const cs=w+data.roll.dice[colors.indexOf(c)+2];
-      const isCol=(active===uid&&num===cs&&num!==w);
+      const csA=data.roll.dice[0]+data.roll.dice[colors.indexOf(c)+2];
+      const csB=data.roll.dice[1]+data.roll.dice[colors.indexOf(c)+2];
       const isWhite=(num===w);
-      if(!isCol&&!isWhite)return;
+      const isCol=(active===uid&&(num===csA||num===csB)&&num!==w);
+      // Non-active players may only mark the two-white-dice sum.
+      if(!isWhite&&!isCol)return;
       if(isCol&&pl.colorTurn===data.turnNumber)return;
       if(isWhite&&pl.whiteTurn===data.turnNumber)return;
       arr.push(num);pl.rows=pl.rows||{};pl.rows[c]=arr;
