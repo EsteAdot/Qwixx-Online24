@@ -178,7 +178,8 @@ window.mark=async function(c,num,colorOK){
   const p=room.players&&room.players[uid];
   if(!p){say("Ta feuille n’est pas chargée. Recharge la page puis rejoins la partie.",true);return;}
   const white=room.roll.dice[0]+room.roll.dice[1];
-  const colA=room.roll.dice[0]+room.roll.dice[colors.indexOf(c)+2];\n  const colB=room.roll.dice[1]+room.roll.dice[colors.indexOf(c)+2];
+  const colA=room.roll.dice[0]+room.roll.dice[colors.indexOf(c)+2];
+  const colB=room.roll.dice[1]+room.roll.dice[colors.indexOf(c)+2];
   const useColor=(isActive && (num===colA || num===colB) && num!==white);
   const useWhite=(num===white);
   if(!useColor&&!useWhite){say("Cette case ne correspond pas à la somme blanche ni à la somme de couleur autorisée.",true);return;}
