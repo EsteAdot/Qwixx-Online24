@@ -90,22 +90,38 @@ async function createRoom(){
  }catch(e){say("Impossible de créer la partie. Vérifie les règles Realtime Database et l’authentification anonyme.",true);console.error(e);}
 }
 async function joinRoom(){
- if(!uid)return say("Patiente une seconde : connexion en cours…",true);
- const code=$("roomCode").value.trim().toUpperCase(), name=$("name").value.trim()||"Joueur";
- if(!/^[A-HJ-NP-Z2-9]{5}$/.test(code))return say("Entre un code de 5 caractères.",true);
- const ref=db.ref("rooms/"+code);
- try{
-  const result=await ref.transaction(data=>{
-   if(!data)return;
-   if(data.members && data.members[uid])return data;
-   if(Object.keys(data.members||{}).length>=5)return;
-   data.members=data.members||{};data.players=data.players||{};
-   data.members[uid]=true;data.players[uid]=newPlayer(name);
-   return data;
-  });
-  if(!result.committed)return say("Partie introuvable ou déjà complète (5 joueurs).",true);
-  enterRoom(code);
- }catch(e){say("Impossible de rejoindre. Vérifie les règles de la base de données.",true);console.error(e);}
+  if(!uid)return say("Patiente une seconde : connexion en cours…",true);
+  const code=$("roomCode").value.trim().toUpperCase(), name=$("name").value.trim()||"Joueur";
+  if(!/^[A-HJ-NP-Z2-9]{5}$/.test(code))return say("Entre un code de 5 caractères (sans I ni O).",true);
+  const ref=db.ref("rooms/"+code);
+  try{
+    // Vérifie d'abord que le code existe et que la salle est lisible.
+    const before=await ref.get();
+    if(!before.exists())return say("Salle introuvable : vérifie le code affiché sur le premier téléphone.",true);
+    const current=before.val()||{};
+    const members=current.members||{};
+    if(members[uid]){enterRoom(code);return;}
+    if(Object.keys(members).length>=5)return say("Cette salle contient déjà 5 joueurs.",true);
+    const result=await ref.transaction(data=>{
+      if(!data)return;
+      data.members=data.members||{};
+      data.players=data.players||{};
+      if(data.members[uid])return data;
+      if(Object.keys(data.members).length>=5)return;
+      data.members[uid]=true;
+      data.players[uid]=newPlayer(name);
+      return data;
+    });
+    if(!result.committed){
+      const latest=result.snapshot && result.snapshot.val();
+      const count=Object.keys((latest&&latest.members)||{}).length;
+      return say(latest ? `Impossible de rejoindre : la salle contient maintenant ${count} joueur(s). Recharge la page et réessaie.` : "La salle a disparu ou l'accès a été refusé. Vérifie les règles Firebase.",true);
+    }
+    enterRoom(code);
+  }catch(e){
+    console.error("Erreur joinRoom:",e);
+    say("Erreur Firebase : "+(e.code||e.message||"connexion refusée")+". Vérifie l'accès Realtime Database.",true);
+  }
 }
 function enterRoom(code){
  roomId=code;roomRef=db.ref("rooms/"+code);$("showCode").textContent=code;showGame();
