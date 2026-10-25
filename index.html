@@ -25,7 +25,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:4px 12px 20
 </style>
 </head>
 <body>
-<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Diagnostic de connexion V4</strong></p></header>
+<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Feuille de jeu V5</strong></p></header>
 <main>
 <section class="card" id="setup">
 <h2>Rejoindre ou créer une partie</h2>
@@ -41,7 +41,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:4px 12px 20
 <div class="row"><button id="rollBtn">Lancer les dés</button><button id="whiteBtn" class="secondary" disabled>Cocher somme blanche</button><button id="finishBtn" class="secondary" disabled>Terminer mon tour</button></div>
 <p class="small" id="hint">Le joueur actif lance les dés. Les autres peuvent cocher la somme des deux dés blancs.</p>
 </section>
-<section class="card hidden" id="boardCard">
+<section class="card" id="boardCard">
 <h2>Ma feuille</h2>
 <p class="small">Choisis une case autorisée après le lancer. Les cases à droite du dernier numéro coché ne peuvent plus être cochées dans cette rangée.</p>
 <div class="rows" id="board"></div>
