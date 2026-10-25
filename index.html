@@ -25,7 +25,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:4px 12px 20
 </style>
 </head>
 <body>
-<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Règles Qwixx V8</strong></p></header>
+<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Règles Qwixx V9</strong></p></header>
 <main>
 <section class="card" id="setup">
 <h2>Rejoindre ou créer une partie</h2>
@@ -157,7 +157,8 @@ function renderBoard(p,roll,isActive){
   board.innerHTML=colors.map(c=>{
     const nums=rowNums[c], marked=Array.isArray(p.rows[c])?p.rows[c]:[], last=marked.length?marked[marked.length-1]:null;
     const whiteSum=roll?roll.dice[0]+roll.dice[1]:null;
-    const colSum=roll?roll.dice[0]+roll.dice[1]+roll.dice[colors.indexOf(c)+2]:null;
+    // La couleur se calcule avec l'un OU l'autre des dés blancs.
+    const colorSums=roll?[roll.dice[0]+roll.dice[colors.indexOf(c)+2],roll.dice[1]+roll.dice[colors.indexOf(c)+2]]:[];
     const canChoose=(num)=>{
       if(!roll||room.ended||marked.includes(num)||p.locked[c])return false;
       const idx=nums.indexOf(num), lastIdx=last===null?-1:nums.indexOf(last);
@@ -166,7 +167,7 @@ function renderBoard(p,roll,isActive){
       return true;
     };
     return `<div class="boardrow ${c}"><div class="rowtitle">${({yellow:"🟨 Jaune",red:"🟥 Rouge",blue:"🟦 Bleu",green:"🟩 Vert"})[c]} ${p.locked[c]?"· verrouillée":""}</div><div class="cells">${nums.map(num=>{
-      const chosen=marked.includes(num), whiteOK=whiteSum===num&&canChoose(num), colorOK=isActive&&colSum===num&&canChoose(num);
+      const chosen=marked.includes(num), whiteOK=whiteSum===num&&canChoose(num), colorOK=isActive&&colorSums.includes(num)&&canChoose(num);
       return `<button class="cell ${chosen?"marked":""} ${(whiteOK||colorOK)?"eligible":""}" ${chosen?"disabled":""} onclick="mark('${c}',${num},${colorOK?'true':'false'})">${chosen?"✓":num}</button>`;
     }).join("")}</div></div>`;
   }).join("");
@@ -177,8 +178,8 @@ window.mark=async function(c,num,colorOK){
   const p=room.players&&room.players[uid];
   if(!p){say("Ta feuille n’est pas chargée. Recharge la page puis rejoins la partie.",true);return;}
   const white=room.roll.dice[0]+room.roll.dice[1];
-  const col=white+room.roll.dice[colors.indexOf(c)+2];
-  const useColor=(isActive && num===col && num!==white);
+  const colA=room.roll.dice[0]+room.roll.dice[colors.indexOf(c)+2];\n  const colB=room.roll.dice[1]+room.roll.dice[colors.indexOf(c)+2];
+  const useColor=(isActive && (num===colA || num===colB) && num!==white);
   const useWhite=(num===white);
   if(!useColor&&!useWhite){say("Cette case ne correspond pas à la somme blanche ni à la somme de couleur autorisée.",true);return;}
   if(useColor&&p.colorTurn===room.turnNumber){say("Tu as déjà coché une somme de couleur pendant ce tour.",true);return;}
