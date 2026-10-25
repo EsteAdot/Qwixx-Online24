@@ -25,7 +25,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:4px 12px 20
 </style>
 </head>
 <body>
-<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Feuille de jeu V7</strong></p></header>
+<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Règles Qwixx V8</strong></p></header>
 <main>
 <section class="card" id="setup">
 <h2>Rejoindre ou créer une partie</h2>
@@ -72,6 +72,7 @@ const auth = firebase.auth(), db = firebase.database();
 const $ = id => document.getElementById(id);
 const colors = ["yellow","red","blue","green"];
 const rowNums = {yellow:[2,3,4,5,6,7,8,9,10,11,12],red:[2,3,4,5,6,7,8,9,10,11,12],blue:[12,11,10,9,8,7,6,5,4,3,2],green:[12,11,10,9,8,7,6,5,4,3,2]};
+const lockNum = {yellow:12, red:12, blue:2, green:2};
 let uid=null, roomId=null, roomRef=null, room=null, lastRoll=null, myWhiteDone=false, myColorDone=false;
 auth.signInAnonymously().then(c=>{uid=c.user.uid; $("setupMsg").textContent="Prêt à jouer.";}).catch(e=>{$("setupMsg").textContent="Erreur de connexion : active la connexion anonyme dans Firebase Authentication."; $("setupMsg").className="small error";});
 function say(msg,err=false){$("setupMsg").textContent=msg;$("setupMsg").className="small "+(err?"error":"");}
@@ -161,7 +162,7 @@ function renderBoard(p,roll,isActive){
       if(!roll||room.ended||marked.includes(num)||p.locked[c])return false;
       const idx=nums.indexOf(num), lastIdx=last===null?-1:nums.indexOf(last);
       if(idx<=lastIdx)return false;
-      if(num===12&&marked.length<5)return false;
+      if(num===lockNum[c]&&marked.length<5)return false;
       return true;
     };
     return `<div class="boardrow ${c}"><div class="rowtitle">${({yellow:"🟨 Jaune",red:"🟥 Rouge",blue:"🟦 Bleu",green:"🟩 Vert"})[c]} ${p.locked[c]?"· verrouillée":""}</div><div class="cells">${nums.map(num=>{
@@ -201,7 +202,7 @@ window.mark=async function(c,num,colorOK){
       pl.locked=pl.locked||{yellow:false,red:false,blue:false,green:false};
       if(isCol)pl.colorTurn=data.turnNumber;
       if(isWhite)pl.whiteTurn=data.turnNumber;
-      if(num===12&&arr.length>=6)pl.locked[c]=true;
+      if(num===lockNum[c]&&arr.length>=6)pl.locked[c]=true;
       data.players[uid]=pl;
       return data;
     });
@@ -224,7 +225,7 @@ $("whiteBtn").onclick=async()=>{
  const p=room.players[uid];
  if(p.whiteTurn===room.turnNumber)return;
  // The white sum is only marked by selecting its number in a row; button explains the sum.
- alert("Pour cocher "+sum+", touche cette valeur dans une des rangées où elle est encore disponible.");
+ say("Pour cocher "+sum+", touche directement la case "+sum+" dans une rangée où elle est autorisée.");
 };
 $("finishBtn").onclick=async()=>{
  if(!room||activeUid()!==uid||!room.roll)return;
