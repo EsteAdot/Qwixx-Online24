@@ -25,7 +25,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:4px 12px 20
 </style>
 </head>
 <body>
-<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Feuille de jeu V5</strong></p></header>
+<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Feuille de jeu V6</strong></p></header>
 <main>
 <section class="card" id="setup">
 <h2>Rejoindre ou créer une partie</h2>
@@ -146,21 +146,29 @@ function render(){
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function score(p){let n=0;for(const c of colors)n+=(p.rows[c]||[]).length?((p.rows[c].length*(p.rows[c].length+1))/2):0;return n-p.misses*5;}
 function renderBoard(p,roll,isActive){
- if(!p)return;
- $("board").innerHTML=colors.map(c=>{
-  const nums=rowNums[c], marked=p.rows[c]||[], last=marked.length?marked[marked.length-1]:null;
-  const whiteSum=roll?roll.dice[0]+roll.dice[1]:null;
-  const colSum=roll?roll.dice[0]+roll.dice[1]+roll.dice[colors.indexOf(c)+2]:null;
-  const canChoose=(num)=>{if(!roll||room.ended||marked.includes(num)||p.locked[c])return false;
-   const idx=nums.indexOf(num), lastIdx=last===null?-1:nums.indexOf(last);
-   if(idx<=lastIdx)return false;
-   if(num===12 && marked.length<5)return false;
-   return true;};
-  return `<div class="boardrow ${c}"><div class="rowtitle">${({yellow:"🟨 Jaune",red:"🟥 Rouge",blue:"🟦 Bleu",green:"🟩 Vert"})[c]} ${p.locked[c]?"· verrouillée":""}</div><div class="cells">${nums.map(num=>{
-    const chosen=marked.includes(num), whiteOK=whiteSum===num&&canChoose(num), colorOK=isActive&&colSum===num&&canChoose(num);
-    return `<button class="cell ${chosen?"marked":""} ${(whiteOK||colorOK)?"eligible":""}" ${chosen?"disabled":""} onclick="mark('${c}',${num},${colorOK?'true':'false'})">${chosen?"✓":num}</button>`;
-  }).join("")}</div></div>`;
- }).join("");
+  const board=$("board");
+  if(!p){
+    board.innerHTML="<p class='small error'>Ta feuille personnelle n’a pas été trouvée. Recharge la page ou rejoins à nouveau la partie.</p>";
+    return;
+  }
+  if(!p.rows)p.rows={yellow:[],red:[],blue:[],green:[]};
+  if(!p.locked)p.locked={yellow:false,red:false,blue:false,green:false};
+  board.innerHTML=colors.map(c=>{
+    const nums=rowNums[c], marked=Array.isArray(p.rows[c])?p.rows[c]:[], last=marked.length?marked[marked.length-1]:null;
+    const whiteSum=roll?roll.dice[0]+roll.dice[1]:null;
+    const colSum=roll?roll.dice[0]+roll.dice[1]+roll.dice[colors.indexOf(c)+2]:null;
+    const canChoose=(num)=>{
+      if(!roll||room.ended||marked.includes(num)||p.locked[c])return false;
+      const idx=nums.indexOf(num), lastIdx=last===null?-1:nums.indexOf(last);
+      if(idx<=lastIdx)return false;
+      if(num===12&&marked.length<5)return false;
+      return true;
+    };
+    return `<div class="boardrow ${c}"><div class="rowtitle">${({yellow:"🟨 Jaune",red:"🟥 Rouge",blue:"🟦 Bleu",green:"🟩 Vert"})[c]} ${p.locked[c]?"· verrouillée":""}</div><div class="cells">${nums.map(num=>{
+      const chosen=marked.includes(num), whiteOK=whiteSum===num&&canChoose(num), colorOK=isActive&&colSum===num&&canChoose(num);
+      return `<button class="cell ${chosen?"marked":""} ${(whiteOK||colorOK)?"eligible":""}" ${chosen?"disabled":""} onclick="mark('${c}',${num},${colorOK?'true':'false'})">${chosen?"✓":num}</button>`;
+    }).join("")}</div></div>`;
+  }).join("");
 }
 window.mark=async function(c,num,colorOK){
  if(!room||!room.roll)return;
