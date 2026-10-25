@@ -95,27 +95,17 @@ async function joinRoom(){
  if(!/^[A-HJ-NP-Z2-9]{5}$/.test(code))return say("Entre un code de 5 caractères.",true);
  const ref=db.ref("rooms/"+code);
  try{
-  // Vérifie séparément l'existence de la salle pour afficher une erreur précise.
-  const firstCheck=await ref.get();
-  if(!firstCheck.exists())return say("Salle introuvable. Vérifie le code et que l'hôte a bien créé la partie.",true);
-  let full=false;
   const result=await ref.transaction(data=>{
    if(!data)return;
-   data.players=data.players||{};
-   const playerIds=Object.keys(data.players);
-   if(data.players[uid])return data; // déjà inscrit sur cet appareil
-   if(playerIds.length>=5){full=true;return;}
-   data.members=data.members||{};
-   data.members[uid]=true;
-   data.players[uid]=newPlayer(name);
+   if(data.members && data.members[uid])return data;
+   if(Object.keys(data.members||{}).length>=5)return;
+   data.members=data.members||{};data.players=data.players||{};
+   data.members[uid]=true;data.players[uid]=newPlayer(name);
    return data;
   });
-  if(!result.committed){
-   if(full)return say("Cette partie contient déjà 5 joueurs.",true);
-   return say("Impossible de rejoindre la salle. Recharge la page et réessaie.",true);
-  }
+  if(!result.committed)return say("Partie introuvable ou déjà complète (5 joueurs).",true);
   enterRoom(code);
- }catch(e){say("Erreur Firebase : "+(e.code||e.message||"connexion refusée")+". Vérifie les règles de la base de données.",true);console.error(e);}
+ }catch(e){say("Impossible de rejoindre. Vérifie les règles de la base de données.",true);console.error(e);}
 }
 function enterRoom(code){
  roomId=code;roomRef=db.ref("rooms/"+code);$("showCode").textContent=code;showGame();
