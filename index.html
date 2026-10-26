@@ -25,7 +25,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:4px 12px 20
 </style>
 </head>
 <body>
-<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Règles Qwixx V11</strong></p></header>
+<header><h1>🎲 Qwixx — multijoueur</h1><p>Une table, plusieurs téléphones · version communautaire non officielle<br><strong>Règles Qwixx V12</strong></p></header>
 <main>
 <section class="card" id="setup">
 <h2>Rejoindre ou créer une partie</h2>
@@ -171,11 +171,11 @@ function renderBoard(p,roll,isActive){
     };
     return `<div class="boardrow ${c}"><div class="rowtitle">${({yellow:"🟨 Jaune",red:"🟥 Rouge",blue:"🟦 Bleu",green:"🟩 Vert"})[c]} ${p.locked[c]?"· verrouillée":""}</div><div class="cells">${nums.map(num=>{
       const chosen=marked.includes(num), whiteOK=whiteAvailable&&whiteSum===num&&canChoose(num), colorOK=colorAvailable&&colorSums.includes(num)&&num!==whiteSum&&canChoose(num);
-      return `<button class="cell ${chosen?"marked":""} ${(whiteOK||colorOK)?"eligible":""}" ${chosen?"disabled":""} onclick="mark('${c}',${num},${colorOK?'true':'false'})">${chosen?"✓":num}</button>`;
+      return `<button class="cell ${chosen?"marked":""} ${(whiteOK||colorOK)?"eligible":""}" ${chosen?"disabled":""} onclick="mark('${c}',${num})">${chosen?"✓":num}</button>`;
     }).join("")}</div></div>`;
   }).join("");
 }
-window.mark=async function(c,num,colorOK){
+window.mark=async function(c,num){
   if(!room||!room.roll){say("Lance les dés avant de cocher une case.",true);return;}
   const isActive=activeUid()===uid;
   const p=room.players&&room.players[uid];
@@ -183,8 +183,10 @@ window.mark=async function(c,num,colorOK){
   const white=room.roll.dice[0]+room.roll.dice[1];
   const colA=room.roll.dice[0]+room.roll.dice[colors.indexOf(c)+2];
   const colB=room.roll.dice[1]+room.roll.dice[colors.indexOf(c)+2];
-  const useWhite=(num===white);
-  const useColor=(isActive && (num===colA || num===colB) && num!==white);
+  const colorMatches=(num===colA || num===colB);
+  // Si les sommes blanche et blanc+couleur sont identiques, dans la rangée de cette couleur on privilégie le choix couleur.
+  const useColor=isActive && colorMatches && p.colorTurn!==room.turnNumber;
+  const useWhite=(num===white) && !useColor;
   if(!useColor&&!useWhite){
     if(!isActive)say("Les autres joueurs ne peuvent cocher que la somme des deux dés blancs.",true);
     else say("Cette case ne correspond pas à la somme blanche ni à une somme blanc + couleur autorisée.",true);
@@ -203,8 +205,9 @@ window.mark=async function(c,num,colorOK){
       const w=data.roll.dice[0]+data.roll.dice[1];
       const csA=data.roll.dice[0]+data.roll.dice[colors.indexOf(c)+2];
       const csB=data.roll.dice[1]+data.roll.dice[colors.indexOf(c)+2];
-      const isWhite=(num===w);
-      const isCol=(active===uid&&(num===csA||num===csB)&&num!==w);
+      const colorMatches=(num===csA||num===csB);
+      const isCol=(active===uid&&colorMatches&&pl.colorTurn!==data.turnNumber);
+      const isWhite=(num===w)&&!isCol;
       // Non-active players may only mark the two-white-dice sum.
       if(!isWhite&&!isCol)return;
       if(isCol&&pl.colorTurn===data.turnNumber)return;
