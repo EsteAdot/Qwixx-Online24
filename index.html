@@ -157,6 +157,9 @@ function renderBoard(p,roll,isActive){
   board.innerHTML=colors.map(c=>{
     const nums=rowNums[c], marked=Array.isArray(p.rows[c])?p.rows[c]:[], last=marked.length?marked[marked.length-1]:null;
     const whiteSum=roll?roll.dice[0]+roll.dice[1]:null;
+    // Une seule somme blanche et une seule somme blanc + couleur par tour.
+    const whiteAvailable=!!roll && p.whiteTurn!==room.turnNumber;
+    const colorAvailable=!!roll && isActive && p.colorTurn!==room.turnNumber;
     // La couleur se calcule avec l'un OU l'autre des dés blancs.
     const colorSums=roll?[roll.dice[0]+roll.dice[colors.indexOf(c)+2],roll.dice[1]+roll.dice[colors.indexOf(c)+2]]:[];
     const canChoose=(num)=>{
@@ -167,7 +170,7 @@ function renderBoard(p,roll,isActive){
       return true;
     };
     return `<div class="boardrow ${c}"><div class="rowtitle">${({yellow:"🟨 Jaune",red:"🟥 Rouge",blue:"🟦 Bleu",green:"🟩 Vert"})[c]} ${p.locked[c]?"· verrouillée":""}</div><div class="cells">${nums.map(num=>{
-      const chosen=marked.includes(num), whiteOK=whiteSum===num&&canChoose(num), colorOK=isActive&&colorSums.includes(num)&&canChoose(num);
+      const chosen=marked.includes(num), whiteOK=whiteAvailable&&whiteSum===num&&canChoose(num), colorOK=colorAvailable&&colorSums.includes(num)&&num!==whiteSum&&canChoose(num);
       return `<button class="cell ${chosen?"marked":""} ${(whiteOK||colorOK)?"eligible":""}" ${chosen?"disabled":""} onclick="mark('${c}',${num},${colorOK?'true':'false'})">${chosen?"✓":num}</button>`;
     }).join("")}</div></div>`;
   }).join("");
@@ -240,7 +243,7 @@ $("finishBtn").onclick=async()=>{
  await roomRef.transaction(d=>{
   if(!d||!d.roll||Object.keys(d.players)[d.turn||0]!==uid)return;
   const pl=d.players[uid], dice=d.roll.dice, white=dice[0]+dice[1];
-  const anyColor=colors.some(c=>{const val=white+dice[colors.indexOf(c)];return (pl.rows[c]||[]).includes(val)&&pl.colorTurn===d.turnNumber;});
+  const anyColor=pl.colorTurn===d.turnNumber;
   const anyWhite=pl.whiteTurn===d.turnNumber;
   if(!anyWhite&&!anyColor)pl.misses=(pl.misses||0)+1;
   d.players[uid]=pl;d.roll=null;d.turn=(d.turn+1)%Object.keys(d.players).length;d.turnNumber=(d.turnNumber||0)+1;
